@@ -1,7 +1,3 @@
-'''
-Speed on OS X 10.8 650M 1024GB GPU: 186s
-'''
-
 import numpy as np
 import time
 from numba import *
@@ -11,12 +7,12 @@ from numbapro import cuda
 # NOTE: CUDA kernel does not return any value
 
 @cuda.jit(argtypes=[f8[:,:], f8[:,:], f8[:,:]])
-def jocabi_relax_core(A, Anew, error):
+def jacobi_relax_core(A, Anew, error):
     n = A.shape[0]
     m = A.shape[1]
 
-    j = cuda.threadIdx.y + cuda.blockIdx.y * cuda.blockDim.y
-    i = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
+    i, j = cuda.grid(2)
+
     if j >= 1 and j < n - 1 and i >= 1 and i < m - 1:
         Anew[j, i] = 0.25 * ( A[j, i + 1] + A[j, i - 1] \
                             + A[j - 1, i] + A[j + 1, i])
@@ -47,28 +43,28 @@ def main():
 
     blockdim = (32, 32)
     griddim = (NN/blockdim[0], NM/blockdim[1])
-        
+
     error_grid = np.zeros_like(A)
-    
+
     stream = cuda.stream()
 
     dA = cuda.to_device(A, stream)          # to device and don't come back
     dAnew = cuda.to_device(Anew, stream)    # to device and don't come back
     derror_grid = cuda.to_device(error_grid, stream)
-    
+
     while error > tol and iter < iter_max:
         assert error_grid.dtype == np.float64
-        
-        jocabi_relax_core[griddim, blockdim, stream](dA, dAnew, derror_grid)
-        
+
+        jacobi_relax_core[griddim, blockdim, stream](dA, dAnew, derror_grid)
+
         derror_grid.to_host(stream)
-        
-        
+
+
         # error_grid is available on host
         stream.synchronize()
-        
+
         error = np.abs(error_grid).max()
-        
+
         # swap dA and dAnew
         tmp = dA
         dA = dAnew
