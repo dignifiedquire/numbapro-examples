@@ -1,5 +1,8 @@
 # Laplace 2D
 
+> CHANGE: Since `numba` gained cuda support in 0.13 all examples
+> in this directory can now be used without `numbapro`.
+
 Implements jacobian relaxation on 4096x4096 matrices.
 
 - laplace2d.py: naive implementation; very slow.
