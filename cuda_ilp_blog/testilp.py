@@ -2,7 +2,7 @@ from timeit import default_timer as timer
 import math
 import numpy as np
 import pylab
-from numbapro import cuda, cudadrv
+from numba import cuda
 # For machine with multiple devices
 cuda.select_device(0)
 
@@ -67,7 +67,7 @@ def vec_add_ilp_x4(a, b, c):
     ck = core(ak, bk)
     cl = core(al, bl)
 
-    # write 
+    # write
     c[i] = ci
     c[j] = cj
     c[k] = ck
@@ -144,9 +144,9 @@ def time_this(kernel, gridsz, blocksz, args):
             ts = timer()
             kernel[gridsz, blocksz](*args)
             cuda.synchronize()
-            te = timer()    
+            te = timer()
             timings.append(te - ts)
-    except cudadrv.error.CudaDriverError, e:
+    except cuda.errors.CudaDriverError, e:
         print 'exc suppressed', e
         return -1
     else:
@@ -195,7 +195,7 @@ def main():
         expected_result = dC.copy_to_host()
         if basetime > 0:
             baseline.append(N / basetime)
-        
+
 
         dC = cuda.device_array_like(A)
         x2time = time_this(vec_add_ilp_x2, gridsz//2, blksz, (dA, dB, dC))

@@ -1,14 +1,13 @@
 import numpy as np
 import time
 from numba import *
-from numbapro import cuda
 
 
 # NOTE: CUDA kernel does not return any value
 
 @cuda.jit(argtypes=[f8[:,:], f8[:,:], f8[:,:]])
 def jacobi_relax_core(A, Anew, error):
-    smem = cuda.shared.array(shape=(32 + 2, 32 + 2), dtype=f4)
+    smem = cuda.shared.array(shape=(34, 34), dtype=f4)
     n = A.shape[0]
     m = A.shape[1]
 

@@ -1,7 +1,6 @@
 import numpy as np
 import time
 from numba import *
-from numbapro import cuda
 
 
 # NOTE: CUDA kernel does not return any value
@@ -13,9 +12,9 @@ def get_max(a, b):
     if a > b : return a
     else: return b
 
-@cuda.jit(void(f8[:,:], f8[:,:], f8[:,:]))
+@cuda.jit(void(f8[:, :], f8[:, :], f8[:, :]), debug=True)
 def jacobi_relax_core(A, Anew, error):
-    err_sm = cuda.shared.array((tpb, tpb), dtype=f8)
+    err_sm = cuda.shared.array((16, 16), dtype=f8)
 
     ty = cuda.threadIdx.x
     tx = cuda.threadIdx.y
@@ -36,7 +35,7 @@ def jacobi_relax_core(A, Anew, error):
     cuda.syncthreads()
 
     # map-reduce err_sm vertically
-    t = tpb // 2
+    t = 16 // 2
     while t > 0:
         if ty < t:
             err_sm[ty, tx] = get_max(err_sm[ty, tx], err_sm[ty + t, tx])
@@ -44,13 +43,12 @@ def jacobi_relax_core(A, Anew, error):
         cuda.syncthreads()
 
     # map-reduce err_sm horizontally
-    t = tpb // 2
+    t = 16 // 2
     while t > 0:
         if tx < t and ty == 0:
             err_sm[ty, tx] = get_max(err_sm[ty, tx], err_sm[ty, tx + t])
         t //= 2
         cuda.syncthreads()
-
 
     if tx == 0 and ty == 0:
         error[by, bx] = err_sm[0, 0]
@@ -78,7 +76,7 @@ def main():
     timer = time.time()
     iter = 0
 
-    blockdim = (tpb, tpb)
+    blockdim = (16, 16)
     griddim = (NN/blockdim[0], NM/blockdim[1])
 
     error_grid = np.zeros(griddim)
@@ -95,7 +93,6 @@ def main():
         jacobi_relax_core[griddim, blockdim, stream](dA, dAnew, derror_grid)
 
         derror_grid.to_host(stream)
-
 
         # error_grid is available on host
         stream.synchronize()

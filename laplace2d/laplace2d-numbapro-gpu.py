@@ -1,7 +1,6 @@
 import numpy as np
 import time
 from numba import *
-from numbapro import cuda
 
 
 # NOTE: CUDA kernel does not return any value

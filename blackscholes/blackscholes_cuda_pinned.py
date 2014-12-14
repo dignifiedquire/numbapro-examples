@@ -2,7 +2,6 @@ import numpy as np
 import math
 import time
 from numba import *
-from numbapro import cuda
 from blackscholes_numba import black_scholes, black_scholes_numba
 #import logging; logging.getLogger().setLevel(0)
 
